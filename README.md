@@ -26,6 +26,7 @@ Le système repose notamment sur FreeRTOS, un shell série via USART2, un GPIO E
 La première étape du TP consistait à créer un projet STM32 sous **STM32CubeIDE** pour la carte NUCLEO-L476RG sans activer la BSP afin de garder le contrôle sur la configuration matérielle. Après la génération du code, plusieurs vérifications ont été réalisées pour s'assurer du bon fonctionnement des périphériques de base avant d'aborder la partie audio plus complexe.
 
 Nous avons d’abord testé la LED LD2 afin de valider l’accès au GPIO. L’allumage et le clignotement ont fonctionné comme prévu, confirmant la bonne configuration du microcontrôleur et du clocking de base. 
+
 ![LED qui clignote](Clignotement LED.jpg)
 
 
