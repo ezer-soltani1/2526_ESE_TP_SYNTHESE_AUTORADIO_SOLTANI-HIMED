@@ -1,5 +1,7 @@
 # TP_Synthèse - Autoradio 
 
+HIMED Zineddine - SOLTANI Ezer
+
 ## Introduction
 
 Ce projet s’inscrit dans le cadre du TP de synthèse portant sur la réalisation d’un système embarqué faisant office d’autoradio sur carte **STM32 NUCLEO-L476RG**. L’objectif est de créer une chaîne audio complète intégrant l’acquisition, le traitement et la restitution d’un signal sonore, avec une interface utilisateur via un shell ainsi qu’un affichage lumineux type VU-mètre.
@@ -32,7 +34,7 @@ Nous avons d’abord testé la LED LD2 afin de valider l’accès au GPIO. L’a
 
 Nous avons ensuite configuré l’USART2, relié au ST-Link interne, afin de communiquer avec un terminal série sur PC. La transmission a été validée en envoyant des messages simples, puis nous avons redirigé la fonction `printf()` vers cette liaison afin de simplifier le débogage et l'affichage des logs durant la suite du projet. Ces premières étapes ont permis d’obtenir une interface de sortie fiable pour vérifier le fonctionnement des modules développés.
 
-![Test de Printf](test_uart2.jpg)
+![Test de Printf](test_uart2.png)
 
 Après validation des périphériques basiques, nous avons activé **FreeRTOS en mode CMSIS-V1** afin de travailler en environnement multitâche. Cela a permis d’isoler chaque fonctionnalité (shell, audio, effets, affichage LED) dans des tâches indépendantes tout en conservant une meilleure lisibilité et modularité du code.
 
