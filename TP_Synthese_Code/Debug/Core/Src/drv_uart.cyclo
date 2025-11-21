@@ -1,0 +1,2 @@
+../Core/Src/drv_uart.c:11:9:drv_uart_receive	1
+../Core/Src/drv_uart.c:19:9:drv_uart_transmit	1

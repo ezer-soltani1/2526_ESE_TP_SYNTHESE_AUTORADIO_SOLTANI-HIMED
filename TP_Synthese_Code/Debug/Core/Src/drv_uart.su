@@ -1,0 +1,2 @@
+../Core/Src/drv_uart.c:11:9:drv_uart_receive	16	static
+../Core/Src/drv_uart.c:19:9:drv_uart_transmit	16	static
