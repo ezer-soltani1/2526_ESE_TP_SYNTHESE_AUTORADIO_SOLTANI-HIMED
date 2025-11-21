@@ -38,7 +38,11 @@ Nous avons ensuite configuré l’USART2, relié au ST-Link interne, afin de com
 
 Après validation des périphériques basiques, nous avons activé **FreeRTOS en mode CMSIS-V1** afin de travailler en environnement multitâche. Cela a permis d’isoler chaque fonctionnalité (shell, audio, effets, affichage LED) dans des tâches indépendantes tout en conservant une meilleure lisibilité et modularité du code.
 
-Une étape essentielle consistait à mettre en place un **shell accessible via UART**. Celui-ci s’exécute dans une tâche FreeRTOS dédiée et utilise des interruptions pour la réception série. Le shell permet d’interagir dynamiquement avec le système, notamment pour tester les différents modules (GPIO Expander, codec SGTL5000, filtres, effets, etc.). Cette approche offre une meilleure flexibilité qu’un programme à comportement figé, car elle permet de modifier les paramètres en temps réel sans recompiler.
+Une étape essentielle consistait à mettre en place un **shell accessible via UART**.
+
+![Test Shell](test_shell_tache.png)
+
+Celui-ci s’exécute dans une tâche FreeRTOS dédiée et utilise des interruptions pour la réception série. Le shell permet d’interagir dynamiquement avec le système, notamment pour tester les différents modules (GPIO Expander, codec SGTL5000, filtres, effets, etc.). Cette approche offre une meilleure flexibilité qu’un programme à comportement figé, car elle permet de modifier les paramètres en temps réel sans recompiler.
 
 À ce stade, le système était fonctionnel avec :
 - une communication série fiable,
