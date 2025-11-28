@@ -147,3 +147,124 @@ void LedTask(void *argument)
 ```
 
 }
+
+### 2.3 Driver
+
+#### Résultat des tests via le shell
+
+La capture ci-dessous montre le fonctionnement du **driver LED** piloté depuis le shell. On y voit l’utilisation des commandes :
+
+* `l <port> <pin> <state>` pour allumer ou éteindre une LED,
+* `b` pour faire clignoter toutes les LED,
+* `k` pour lancer le chenillard.
+
+![Shell LED Control](images/control_led_shell.png)
+
+#### Résultat matériel sur la carte
+
+La photo suivante illustre l’allumage correct des LED confirmé par les commandes envoyées depuis le shell.
+
+![LED Test Board](images/specific_led.jpeg)
+
+Le pilotage des LED via le MCP23S17 a été encapsulé dans un **driver dédié**, permettant une organisation plus claire du code et une interaction simplifiée depuis le shell. Le driver repose sur une structure définie dans `leds.h`, regroupant les pointeurs de fonctions nécessaires : initialisation, écriture, lecture ainsi que différents modes de test des LED.
+
+La structure principale est la suivante :
+
+```c
+typedef struct {
+    void (*init)(void);
+    void (*write)(uint8_t reg, uint8_t value);
+    uint8_t (*read)(uint8_t reg);
+    void (*test_first_led)(void);
+    void (*chenillard)(void);
+    void (*blink_all)(void);
+} LED_Driver_t;
+```
+
+Cette approche permet de séparer clairement la logique de haut niveau de la gestion matérielle, facilitant la maintenance et l’évolution du système.
+
+### Initialisation du driver
+
+L’initialisation configure le MCP23S17 via SPI, place les ports en sortie (`IODIRA` et `IODIRB = 0x00`) et initialise un **shadow register** permettant de conserver localement l’état des LED.
+
+Extrait :
+
+```c
+void LED_Driver_Init(LED_Driver_t *driver) {
+    driver->init = MCP23S17_Init;
+    driver->write = MCP23S17_Write;
+    driver->read = MCP23S17_Read;
+    driver->test_first_led = Test_First_LED;
+    driver->chenillard = LED_Chenillard;
+    driver->blink_all = Blink_All_LEDs;
+
+    driver->init();
+}
+```
+
+### Accès bas-niveau au MCP23S17
+
+La communication SPI est assurée par deux fonctions privées :
+
+* **MCP23S17_Write()** pour écrire dans un registre
+* **MCP23S17_Read()** pour lire un registre
+
+Extrait de l’écriture :
+
+```c
+static void MCP23S17_Write(uint8_t reg, uint8_t value) {
+    uint8_t data[3] = { MCP_OPCODE_WRITE, reg, value };
+    HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_RESET);
+    HAL_SPI_Transmit(&hspi3, data, 3, HAL_MAX_DELAY);
+    HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_SET);
+}
+```
+
+### Commandes Shell
+
+Afin de contrôler facilement les LED sans recompiler, plusieurs commandes shell ont été implémentées.
+
+#### 🔹 Allumer/Éteindre une LED
+
+Commande :
+
+```
+l <port> <pin> <state>
+```
+
+Exemple : `l A 3 1` → allume la LED A3.
+
+Extrait :
+
+```c
+if (state == 1)
+    *shadow_reg &= ~(1 << pin);   // ON (active low)
+else
+    *shadow_reg |=  (1 << pin);   // OFF
+
+led_driver.write(reg_addr, *shadow_reg);
+```
+
+#### 🔹 Chenillard depuis le shell
+
+```c
+int shell_chenillard(h_shell_t *h_shell, int argc, char **argv) {
+    h_shell->drv.transmit("Running Chenillard...
+", 22);
+    led_driver.chenillard();
+    return 0;
+}
+```
+
+#### 🔹 Blinking complet
+
+```c
+int shell_blink_all(h_shell_t *h_shell, int argc, char **argv) {
+    h_shell->drv.transmit("Blinking All LEDs...
+", 23);
+    led_driver.blink_all();
+    return 0;
+}
+```
+
+L’intégration de ce driver et de ses commandes shell permet un pilotage complet et flexible du VU-mètre, tout en gardant une architecture logicielle propre et modulaire.
