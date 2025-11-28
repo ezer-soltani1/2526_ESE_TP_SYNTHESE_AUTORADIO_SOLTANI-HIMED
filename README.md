@@ -268,3 +268,64 @@ int shell_blink_all(h_shell_t *h_shell, int argc, char **argv) {
 ```
 
 L’intégration de ce driver et de ses commandes shell permet un pilotage complet et flexible du VU-mètre, tout en gardant une architecture logicielle propre et modulaire.
+
+## 3. Le CODEC Audio SGTL5000
+
+### 3.1 Configuration préalables
+
+Le codec **SGTL5000** nécessite deux interfaces distinctes pour fonctionner correctement :
+
+* **I2C** pour la configuration (accès aux registres internes),
+* **SAI2 (I2S)** pour l’échange des données audio (échantillons PCM).
+
+La configuration a été entièrement réalisée sous **STM32CubeIDE**, conformément aux consignes du TP.
+
+---
+
+### 🔹 Configuration de l’horloge — PLLSAI1 pour générer 12.235294 MHz
+
+Le SGTL5000 requiert une horloge audio stable. Pour cela, le périphérique **SAI2** est alimenté par **PLLSAI1**, configurée pour produire **12.235294 MHz**.
+
+Voici la configuration obtenue :
+
+![Clock SAI](images/clock_sai.png)
+
+Cette fréquence correspond à un multiple compatible avec l’audio 48 kHz (conditions du TP).
+
+---
+
+### 🔹 Configuration du SAI2
+
+Le SAI2 est composé de deux sous-blocs :
+
+* **SAI2_A** : configuré en *Master Transmit* avec génération du **Master Clock (MCLK)**.
+* **SAI2_B** : configuré en *Synchronous Slave* (suivant la clock de A).
+
+Les deux utilisent le mode **I2S/PCM Protocol**.
+
+![SAI2 Config](images/sai2_config.png)
+
+Les broches utilisées sont :
+
+* **PB12** → SAI2_FS_A
+* **PB13** → SAI2_SCK_A
+* **PB14** → SAI2_MCLK_A
+* **PB15** → SAI2_SD_A
+* **PC12** → SAI2_SD_B
+
+Ces broches correspondent au schéma fourni dans le sujet.
+
+---
+
+### 🔹 Configuration de l’I2C (pour piloter le SGTL5000)
+
+L’I2C utilisé est **I2C2**, configuré en mode Standard (100 kHz), ce qui est suffisant pour écrire dans les registres du SGTL5000.
+
+![I2C2 Config](images/i2c2_config.png)
+
+Les broches associées sont :
+
+* **PB10** → I2C2_SCL
+* **PB11** → I2C2_SDA
+
+La configuration reste celle par défaut, comme demandé dans le TP.
