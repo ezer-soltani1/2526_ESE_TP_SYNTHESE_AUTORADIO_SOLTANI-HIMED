@@ -68,3 +68,82 @@ La configuration du SPI3 a été réalisée directement dans STM32CubeIDE. Les p
 ![Configuration SPI3](images/spi3_config.png)
 
 Cette configuration assure un dialogue fiable entre le STM32 et le MCP23S17. Une fois les paramètres confirmés, le code a été généré automatiquement par STM32CubeIDE.
+
+### 2.2 Tests
+
+La validation du fonctionnement du GPIO Expander MCP23S17 et des LED a été réalisée à l’aide de la tâche `LedTask()`. Cette tâche est chargée d’initialiser l’expander, puis de générer un chenillard sur l’ensemble des sorties, ce qui permet à la fois de faire clignoter une LED et de tester successivement toutes les lignes des ports A et B.
+
+Le déroulement de la tâche est le suivant :
+
+* Un **reset matériel** est d’abord appliqué au MCP23S17 via la broche `VU_nRESET` (mise à 0 puis à 1 avec un léger délai), afin de garantir un état propre du composant.
+* Les deux ports du MCP23S17 sont ensuite **configurés en sortie** en écrivant `0x00` dans les registres `IODIRA` et `IODIRB` via l’interface SPI3.
+* Une variable `GPIO_value` est initialisée à `0x01`. Cette valeur représente le motif binaire envoyé vers les LED.
+* Dans une boucle infinie, cette valeur est écrite dans les registres de latch de sortie `OLATA` et `OLATB`, de sorte que le même motif soit appliqué sur les ports A et B.
+* Un délai de 100 ms est appliqué entre chaque mise à jour, pour rendre le mouvement des LED visible.
+* À chaque itération, `GPIO_value` est décalée d’un bit vers la gauche (`GPIO_value <<= 1`). Lorsque la valeur devient nulle (débordement après le bit le plus significatif), elle est réinitialisée à `0x01`.
+
+Ce fonctionnement produit un **chenillard** : un seul bit à `1` se déplace de la position la plus faible à la plus forte, puis revient au début. Visuellement, cela se traduit par une LED allumée qui se déplace le long de la barre de LED, ce qui permet de vérifier individuellement chaque sortie de l’expander sur les ports A et B.
+
+La tâche utilisée est la suivante :
+
+```c
+void LedTask(void *argument)
+{
+    // Reset
+    HAL_GPIO_WritePin(VU_nRESET_GPIO_Port, VU_nRESET_Pin, GPIO_PIN_RESET);
+    HAL_Delay(1);
+    HAL_GPIO_WritePin(VU_nRESET_GPIO_Port, VU_nRESET_Pin, GPIO_PIN_SET);
+    HAL_Delay(1);
+
+    uint8_t tx_data[3];
+
+    // Configurer Port A en sortie
+    tx_data[0] = MCP_OPCODE_WRITE;
+    tx_data[1] = MCP_IODIRA;
+    tx_data[2] = 0x00; // Tous les pins en sortie
+    HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_RESET);
+    HAL_SPI_Transmit(&hspi3, tx_data, 3, HAL_MAX_DELAY);
+    HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_SET);
+    HAL_Delay(1);
+
+    // Configurer Port B en sortie
+    tx_data[1] = MCP_IODIRB;
+    tx_data[2] = 0x00;
+    HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_RESET);
+    HAL_SPI_Transmit(&hspi3, tx_data, 3, HAL_MAX_DELAY);
+    HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_SET);
+
+    tx_data[0] = MCP_OPCODE_WRITE;
+
+    uint8_t GPIO_value = 0x01;
+    for(;;)
+    {
+        tx_data[2] = GPIO_value;
+
+        // Port A
+        tx_data[1] = MCP_OLATA;
+        HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_RESET);
+        HAL_SPI_Transmit(&hspi3, tx_data, 3, HAL_MAX_DELAY);
+        HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_SET);
+
+        // Port B
+        tx_data[1] = MCP_OLATB;
+        HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_RESET);
+        HAL_SPI_Transmit(&hspi3, tx_data, 3, HAL_MAX_DELAY);
+        HAL_GPIO_WritePin(VU_nCS_GPIO_Port, VU_nCS_Pin, GPIO_PIN_SET);
+
+        HAL_Delay(100);
+
+        GPIO_value <<= 1;
+        if (GPIO_value == 0x00 ) {
+            GPIO_value = 0x01;
+        }
+    }
+}
+```
+
+```
+}
+```
+
+}
