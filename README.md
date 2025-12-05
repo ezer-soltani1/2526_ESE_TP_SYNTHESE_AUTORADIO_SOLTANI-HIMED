@@ -329,3 +329,17 @@ Les broches associées sont :
 * **PB11** → I2C2_SDA
 
 La configuration reste celle par défaut, comme demandé dans le TP.
+
+---
+
+### 🔹 Configuration du DMA pour le SAI2
+
+Pour gérer efficacement le flux audio via le SAI2, le **DMA (Direct Memory Access)** a été configuré pour les sous-blocs SAI2_A et SAI2_B. Le mode circulaire est activé pour permettre un transfert continu des données sans intervention du processeur.
+
+*   **SAI2_A** : Utilise **DMA1 Channel 6** avec une direction *Memory To Peripheral*. Cela permet de transmettre les données audio depuis la mémoire vers le DAC du CODEC. La priorité est réglée sur *Low*.
+*   **SAI2_B** : Utilise **DMA1 Channel 7** avec une direction *Peripheral To Memory*. Cela permet de recevoir les données audio depuis l'ADC du CODEC et de les stocker en mémoire. La priorité est également réglée sur *Low*.
+
+Ces configurations sont visibles dans la capture d'écran ci-dessous :
+
+![DMA Config](images/dma_config.png)
+

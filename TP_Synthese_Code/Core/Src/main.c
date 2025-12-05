@@ -44,6 +44,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define AUDIO_BLOCK_SIZE 256
+#define AUDIO_BUFFER_SIZE (AUDIO_BLOCK_SIZE * 2)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -57,6 +59,9 @@
 SemaphoreHandle_t uartRxSemaphore;
 uint8_t rxCharBuffer;
 h_sgtl5000_t sgtl5000_handle;
+
+uint16_t audio_tx_buffer[AUDIO_BUFFER_SIZE];
+uint16_t audio_rx_buffer[AUDIO_BUFFER_SIZE];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -141,6 +146,10 @@ int main(void)
   sgtl5000_handle.hi2c = &hi2c2;
   sgtl5000_handle.i2c_address = SGTL5000_I2C_ADDR_WRITE;
   sgtl5000_init(&sgtl5000_handle);
+
+  // Start SAI DMA transfers
+  HAL_SAI_Transmit_DMA(&hsai_BlockA2, (uint8_t*)audio_tx_buffer, AUDIO_BUFFER_SIZE);
+  HAL_SAI_Receive_DMA(&hsai_BlockB2, (uint8_t*)audio_rx_buffer, AUDIO_BUFFER_SIZE);
 
   uartRxSemaphore = xSemaphoreCreateBinary();
   HAL_UART_Receive_IT(&huart2, &rxCharBuffer, 1);
@@ -257,6 +266,46 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     HAL_UART_Receive_IT(&huart2, &rxCharBuffer, 1);
 
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  }
+}
+
+// SAI Transmit Half-Complete Callback
+void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *hsai)
+{
+  if (hsai->Instance == SAI2_Block_A)
+  {
+    // Process the first half of the TX buffer
+    // For now, this is a placeholder. Test signal generation or bypass logic will go here.
+  }
+}
+
+// SAI Transmit Complete Callback
+void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
+{
+  if (hsai->Instance == SAI2_Block_A)
+  {
+    // Process the second half of the TX buffer
+    // For now, this is a placeholder. Test signal generation or bypass logic will go here.
+  }
+}
+
+// SAI Receive Half-Complete Callback
+void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *hsai)
+{
+  if (hsai->Instance == SAI2_Block_B)
+  {
+    // Process the first half of the RX buffer
+    // For now, this is a placeholder. Bypass logic will go here.
+  }
+}
+
+// SAI Receive Complete Callback
+void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
+{
+  if (hsai->Instance == SAI2_Block_B)
+  {
+    // Process the second half of the RX buffer
+    // For now, this is a placeholder. Bypass logic will go here.
   }
 }
 /* USER CODE END 4 */
