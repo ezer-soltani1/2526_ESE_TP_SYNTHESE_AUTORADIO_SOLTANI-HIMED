@@ -276,7 +276,7 @@ L’intégration de ce driver et de ses commandes shell permet un pilotage compl
 Le codec **SGTL5000** nécessite deux interfaces distinctes pour fonctionner correctement :
 
 * **I2C** pour la configuration (accès aux registres internes),
-* **SAI2 (I2S)** pour l’échange des données audio (échantillons PCM).
+* **SAI2 [Serial Audi Interface] (I2S)** pour l’échange des données audio (échantillons PCM).
 
 La configuration a été entièrement réalisée sous **STM32CubeIDE**, conformément aux consignes du TP.
 
