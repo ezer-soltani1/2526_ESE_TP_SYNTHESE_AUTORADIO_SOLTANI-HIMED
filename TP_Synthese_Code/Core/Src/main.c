@@ -46,6 +46,24 @@
 /* USER CODE BEGIN PD */
 #define AUDIO_BLOCK_SIZE 256
 #define AUDIO_BUFFER_SIZE (AUDIO_BLOCK_SIZE * 2)
+
+// Defines for triangular wave generation
+#define SAMPLE_RATE_HZ 48000
+#define TRIANGLE_TEST_FREQ_HZ 440
+#define TRIANGLE_MAX_AMPLITUDE 15000 // Max 32767 for int16_t
+// Calculate step based on desired frequency and amplitude.
+// A full cycle (up and down) covers 2 * TRIANGLE_MAX_AMPLITUDE.
+// The number of samples per full cycle is SAMPLE_RATE_HZ / TRIANGLE_TEST_FREQ_HZ.
+// So, step per sample = (2 * TRIANGLE_MAX_AMPLITUDE) / (SAMPLE_RATE_HZ / TRIANGLE_TEST_FREQ_HZ)
+// To keep it integer, we can use a fractional step or a phase accumulator.
+// For simplicity, let's use a fixed step and control direction.
+// A step of 200 with 48kHz sample rate, 15000 amplitude gives a frequency around 320Hz,
+// so 15000 / 200 = 75 steps for half cycle. Total 150 steps for full cycle.
+// 48000 samples/sec / 150 steps/cycle = 320 cycles/sec = 320 Hz.
+// To get 440Hz, we need 48000/440 = 109 samples per cycle.
+// 2 * 15000 / 109 = 275.22. Let's use a rounded step.
+#define TRIANGLE_STEP ((2 * TRIANGLE_MAX_AMPLITUDE) / (SAMPLE_RATE_HZ / TRIANGLE_TEST_FREQ_HZ))
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -62,6 +80,10 @@ h_sgtl5000_t sgtl5000_handle;
 
 uint16_t audio_tx_buffer[AUDIO_BUFFER_SIZE];
 uint16_t audio_rx_buffer[AUDIO_BUFFER_SIZE];
+
+// Global variables for triangle wave generation
+int32_t triangle_current_value = 0;
+int32_t triangle_direction = 1; // 1 for rising, -1 for falling
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -274,8 +296,28 @@ void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *hsai)
 {
   if (hsai->Instance == SAI2_Block_A)
   {
-    // Process the first half of the TX buffer
-    // For now, this is a placeholder. Test signal generation or bypass logic will go here.
+    // Process the first half of the TX buffer (0 to AUDIO_BLOCK_SIZE * 2 - 1)
+    // Each frame is 2 samples (left and right)
+    for (int i = 0; i < AUDIO_BLOCK_SIZE; i++) {
+        // Generate triangle wave for current sample
+        triangle_current_value += triangle_direction * TRIANGLE_STEP;
+
+        if (triangle_current_value >= TRIANGLE_MAX_AMPLITUDE) {
+            triangle_current_value = TRIANGLE_MAX_AMPLITUDE; // Cap at max
+            triangle_direction = -1; // Change direction to falling
+        } else if (triangle_current_value <= -TRIANGLE_MAX_AMPLITUDE) {
+            triangle_current_value = -TRIANGLE_MAX_AMPLITUDE; // Cap at min
+            triangle_direction = 1; // Change direction to rising
+        }
+
+        // Convert signed 16-bit sample to unsigned 16-bit for SAI (0 to 65535 range)
+        // Assuming 16-bit audio, shift by +32768 to center around 0x8000
+        uint16_t output_sample = (uint16_t)(triangle_current_value + 32768);
+
+        // Fill both left and right channels with the same sample
+        audio_tx_buffer[(2 * i)] = output_sample;     // Left Channel
+        audio_tx_buffer[(2 * i) + 1] = output_sample; // Right Channel
+    }
   }
 }
 
@@ -284,8 +326,27 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 {
   if (hsai->Instance == SAI2_Block_A)
   {
-    // Process the second half of the TX buffer
-    // For now, this is a placeholder. Test signal generation or bypass logic will go here.
+    // Process the second half of the TX buffer (AUDIO_BLOCK_SIZE * 2 to AUDIO_BUFFER_SIZE - 1)
+    for (int i = 0; i < AUDIO_BLOCK_SIZE; i++) {
+        // Generate triangle wave for current sample
+        triangle_current_value += triangle_direction * TRIANGLE_STEP;
+
+        if (triangle_current_value >= TRIANGLE_MAX_AMPLITUDE) {
+            triangle_current_value = TRIANGLE_MAX_AMPLITUDE; // Cap at max
+            triangle_direction = -1; // Change direction to falling
+        } else if (triangle_current_value <= -TRIANGLE_MAX_AMPLITUDE) {
+            triangle_current_value = -TRIANGLE_MAX_AMPLITUDE; // Cap at min
+            triangle_direction = 1; // Change direction to rising
+        }
+
+        // Convert signed 16-bit sample to unsigned 16-bit for SAI (0 to 65535 range)
+        // Assuming 16-bit audio, shift by +32768 to center around 0x8000
+        uint16_t output_sample = (uint16_t)(triangle_current_value + 32768);
+
+        // Fill both left and right channels with the same sample
+        audio_tx_buffer[AUDIO_BLOCK_SIZE * 2 + (2 * i)] = output_sample;     // Left Channel
+        audio_tx_buffer[AUDIO_BLOCK_SIZE * 2 + (2 * i) + 1] = output_sample; // Right Channel
+    }
   }
 }
 
