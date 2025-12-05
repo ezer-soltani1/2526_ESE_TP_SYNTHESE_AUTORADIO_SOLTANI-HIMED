@@ -365,7 +365,7 @@ HAL_SAI_ENABLE(&hsai_BlockA2);
 
 Le CODEC SGTL5000 est piloté via l'interface I2C pour sa configuration interne (volumes, routage, horloges, etc.). Une bibliothèque dédiée composée des fichiers `sgtl5000.c` et `sgtl5000.h` a été développée pour encapsuler ces échanges.
 
-### ✅ Vérification du Signal MCLK
+###  Vérification du Signal MCLK
 
 Le but de cette étape est de confirmer la présence et la stabilité du signal d'horloge **MCLK** (**Master Clock**) à l'aide d'un oscilloscope.
 
@@ -406,7 +406,7 @@ Pour configurer le CODEC selon les spécifications du TP (Fréquence d'échantil
 | `CHIP_ADCDAC_CTRL` | `0x0000` | Désactive le mute du DAC |
 | `CHIP_DAC_VOL` | `0x3C3C` | Règle le volume du DAC à 0dB (droite et gauche) |
 
-### 🕰️ Vérification du Signal d'Horloge **BCLK**
+### Vérification du Signal d'Horloge **BCLK**
 
 Cette section documente la vérification de la présence et des caractéristiques du signal d'horloge **BCLK** (**Bit Clock** ou **Base Clock**) à l'aide de l'oscilloscope.
 
@@ -414,7 +414,7 @@ Le signal d'horloge **BCLK** est **présent**. Il s'agit d'une **onde carrée** 
 
 ***
 
-### 🖼️ Capture d'Écran de l'Oscilloscope
+### Capture d'Écran de l'Oscilloscope
 
 ![Signal de l'Horloge BCLK mesuré avec l'oscilloscope](images/scope_4.png)
 
