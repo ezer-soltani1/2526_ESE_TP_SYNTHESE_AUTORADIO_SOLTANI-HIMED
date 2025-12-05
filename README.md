@@ -360,6 +360,88 @@ La ligne de code suivante est ajoutée :
   MX_I2C2_Init();
   MX_SAI2_Init();
   /* USER CODE BEGIN 2 */
-  __HAL_SAI_ENABLE(&hsai_BlockA2);
+HAL_SAI_ENABLE(&hsai_BlockA2);
+
+## 3.2 Configuration du CODEC par l’I2C
+
+Le CODEC SGTL5000 est piloté via l'interface I2C pour sa configuration interne (volumes, routage, horloges, etc.). Une bibliothèque dédiée composée des fichiers `sgtl5000.c` et `sgtl5000.h` a été développée pour encapsuler ces échanges.
+
+### Lecture du CHIP_ID
+
+La première étape de validation consiste à lire le registre d'identification du composant. L'adresse I2C de base est `0x0A` (7 bits), ce qui correspond à `0x14` en écriture et `0x15` en lecture.
+
+Dans la fonction d'initialisation, nous lisons le registre `CHIP_ID` (0x0000) :
+```c
+uint16_t chip_id_value;
+sgtl5000_i2c_read_register(h_sgtl5000, SGTL5000_CHIP_ID, &chip_id_value);
+// La valeur attendue est typiquement 0xA000
+```
+
+### Configuration des registres
+
+Pour configurer le CODEC selon les spécifications du TP (Fréquence d'échantillonnage de 48 kHz, interface I2S en mode esclave, etc.), les valeurs suivantes ont été déterminées et écrites dans les registres :
+
+| Registre | Valeur Hex | Description |
+| :--- | :--- | :--- |
+| `CHIP_ANA_POWER` | `0x6AFF` | Active les blocs analogiques (DAC, ADC, PLL, Sorties Ligne/Casque) |
+| `CHIP_LINREG_CTRL` | Bits 5,6 à 1 | Configure la pompe de charge pour une tension VDDIO > 3.1V |
+| `CHIP_REF_CTRL` | `0x01FF` | Définit la tension de référence (VAG = 1.575V) |
+| `CHIP_LINE_OUT_CTRL` | `0x031E` | Configure le niveau et le courant de bias de la sortie ligne |
+| `CHIP_SHORT_CTRL` | `0x1106` | Active la protection contre les courts-circuits |
+| `CHIP_ANA_CTRL` | `0x0004` | Sélectionne l'entrée ADC (Line-In) |
+| `CHIP_DIG_POWER` | `0x0073` | Active les blocs numériques (I2S In/Out, DAC, ADC) |
+| `CHIP_CLK_CTRL` | `0x0004` | Définit la fréquence d'échantillonnage (Sys_FS) à 48 kHz |
+| `CHIP_I2S_CTRL` | `0x0130` | Mode I2S Esclave, longueur de donnée 16 bits |
+| `CHIP_ADCDAC_CTRL` | `0x0000` | Désactive le mute du DAC |
+| `CHIP_DAC_VOL` | `0x3C3C` | Règle le volume du DAC à 0dB (droite et gauche) |
+
+### Implémentation logicielle
+
+#### Initialisation dans `sgtl5000.c`
+
+Voici l'extrait de la fonction `sgtl5000_init` qui applique cette configuration :
+
+```c
+HAL_StatusTypeDef sgtl5000_init(h_sgtl5000_t *h_sgtl5000) {
+    HAL_StatusTypeDef ret = HAL_OK;
+    uint16_t chip_id_value;
+
+    // 1. Vérification de la communication
+    ret = sgtl5000_i2c_read_register(h_sgtl5000, SGTL5000_CHIP_ID, &chip_id_value);
+    if (ret != HAL_OK) return ret;
+
+    // 2. Configuration de l'alimentation et des références
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_ANA_POWER, 0x6AFF);
+    ret |= sgtl5000_i2c_set_bit(h_sgtl5000, SGTL5000_CHIP_LINREG_CTRL, (1 << 5) | (1 << 6));
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_REF_CTRL, 0x01FF);
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_LINE_OUT_CTRL, 0x031E);
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_SHORT_CTRL, 0x1106);
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_ANA_CTRL, 0x0004); // ADC Input = Line In
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_DIG_POWER, 0x0073);
+
+    // 3. Configuration de l'horloge et de l'interface I2S
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_CLK_CTRL, 0x0004); // 48 kHz
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_I2S_CTRL, 0x0130); // Slave, 16-bit;
+
+    // 4. Routage et Volumes
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_ADCDAC_CTRL, 0x0000);
+    ret |= sgtl5000_i2c_write_register(h_sgtl5000, SGTL5000_CHIP_DAC_VOL, 0x3C3C); // 0dB
+
+    return ret;
+}
+```
+
+#### Appel dans `main.c`
+
+Dans le fichier `main.c`, la structure de gestion est initialisée et la fonction est appelée après l'activation du MCLK :
+
+```c
+// Initialisation de la structure avec le pointeur I2C et l'adresse
+sgtl5000_handle.hi2c = &hi2c2;
+sgtl5000_handle.i2c_address = SGTL5000_I2C_ADDR_WRITE;
+
+// Configuration effective du CODEC
+sgtl5000_init(&sgtl5000_handle);
+```
 ```
 
