@@ -406,6 +406,18 @@ Pour configurer le CODEC selon les spécifications du TP (Fréquence d'échantil
 | `CHIP_ADCDAC_CTRL` | `0x0000` | Désactive le mute du DAC |
 | `CHIP_DAC_VOL` | `0x3C3C` | Règle le volume du DAC à 0dB (droite et gauche) |
 
+### 🕰️ Vérification du Signal d'Horloge **BCLK**
+
+Cette section documente la vérification de la présence et des caractéristiques du signal d'horloge **BCLK** (**Bit Clock** ou **Base Clock**) à l'aide de l'oscilloscope.
+
+Le signal d'horloge **BCLK** est **présent**. Il s'agit d'une **onde carrée** périodique et stable, essentielle pour la transmission des données.
+
+***
+
+### 🖼️ Capture d'Écran de l'Oscilloscope
+
+![Signal de l'Horloge BCLK mesuré avec l'oscilloscope](images/scope_4.png)
+
 ### 🔹Implémentation logicielle
 
 #### Initialisation dans `sgtl5000.c`
