@@ -285,7 +285,11 @@ void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *hsai)
 {
   if (hsai->Instance == SAI2_Block_A)
   {
-    for (int i = 0; i < AUDIO_BLOCK_SIZE; i++) {
+    // Triangle wave generation disabled for bypass functionality.
+    // Process the first half of the TX buffer (0 to AUDIO_BLOCK_SIZE * 2 - 1)
+    // Each frame is 2 samples (left and right)
+    /*for (int i = 0; i < AUDIO_BLOCK_SIZE; i++) {
+        // Generate triangle wave for current sample
         triangle_current_value += triangle_direction * TRIANGLE_STEP;
 
         if (triangle_current_value >= TRIANGLE_MAX_AMPLITUDE) {
@@ -297,9 +301,10 @@ void HAL_SAI_TxHalfCpltCallback(SAI_HandleTypeDef *hsai)
         }
         uint16_t output_sample = (uint16_t)triangle_current_value;
 
+        // Fill both left and right channels with the same sample
         audio_tx_buffer[(2 * i)] = output_sample;     // Left Channel
         audio_tx_buffer[(2 * i) + 1] = output_sample; // Right Channel
-    }
+    }*/
   }
 }
 
@@ -308,22 +313,28 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 {
   if (hsai->Instance == SAI2_Block_A)
   {
-    for (int i = 0; i < AUDIO_BLOCK_SIZE; i++) {
+    // Triangle wave generation disabled for bypass functionality.
+    // Process the second half of the TX buffer (AUDIO_BLOCK_SIZE * 2 to AUDIO_BUFFER_SIZE - 1)
+    /*for (int i = 0; i < AUDIO_BLOCK_SIZE; i++) {
+        // Generate triangle wave for current sample
         triangle_current_value += triangle_direction * TRIANGLE_STEP;
 
         if (triangle_current_value >= TRIANGLE_MAX_AMPLITUDE) {
-            triangle_current_value = TRIANGLE_MAX_AMPLITUDE;
-            triangle_direction = -1;
+            triangle_current_value = TRIANGLE_MAX_AMPLITUDE; // Cap at max
+            triangle_direction = -1; // Change direction to falling
         } else if (triangle_current_value <= -TRIANGLE_MAX_AMPLITUDE) {
-            triangle_current_value = -TRIANGLE_MAX_AMPLITUDE;
-            triangle_direction = 1;
+            triangle_current_value = -TRIANGLE_MAX_AMPLITUDE; // Cap at min
+            triangle_direction = 1; // Change direction to rising
         }
 
+        // Convert signed 16-bit sample to unsigned 16-bit for SAI (0 to 65535 range)
+        // Assuming 16-bit audio, shift by +32768 to center around 0x8000
         uint16_t output_sample = (uint16_t)triangle_current_value;
 
-        audio_tx_buffer[AUDIO_BLOCK_SIZE * 2 + (2 * i)] = output_sample;
-        audio_tx_buffer[AUDIO_BLOCK_SIZE * 2 + (2 * i) + 1] = output_sample;
-    }
+        // Fill both left and right channels with the same sample
+        audio_tx_buffer[AUDIO_BLOCK_SIZE * 2 + (2 * i)] = output_sample;     // Left Channel
+        audio_tx_buffer[AUDIO_BLOCK_SIZE * 2 + (2 * i) + 1] = output_sample; // Right Channel
+    }*/
   }
 }
 
@@ -333,7 +344,10 @@ void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *hsai)
   if (hsai->Instance == SAI2_Block_B)
   {
     // Process the first half of the RX buffer
-    // For now, this is a placeholder. Bypass logic will go here.
+    // Copy first half of RX buffer to first half of TX buffer
+    for (int i = 0; i < AUDIO_BLOCK_SIZE * 2; i++) {
+        audio_tx_buffer[i] = audio_rx_buffer[i];
+    }
   }
 }
 
@@ -343,7 +357,10 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
   if (hsai->Instance == SAI2_Block_B)
   {
     // Process the second half of the RX buffer
-    // For now, this is a placeholder. Bypass logic will go here.
+    // Copy second half of RX buffer to second half of TX buffer
+    for (int i = 0; i < AUDIO_BLOCK_SIZE * 2; i++) {
+        audio_tx_buffer[AUDIO_BLOCK_SIZE * 2 + i] = audio_rx_buffer[AUDIO_BLOCK_SIZE * 2 + i];
+    }
   }
 }
 /* USER CODE END 4 */
