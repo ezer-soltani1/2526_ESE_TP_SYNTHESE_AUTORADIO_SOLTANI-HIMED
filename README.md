@@ -536,6 +536,44 @@ for (int i = 0; i < AUDIO_BLOCK_SIZE; i++) {
 
 ## 3.4 Bypass numérique
 
+
+Code d'Implémentation du Bypass
+
+L'implémentation utilise l'interface **SAI** (Serial Audio Interface) du microcontrôleur, configurée en mode **DMA circulaire**. Cette méthode permet de lire les échantillons audio de l'ADC (via SAI\_RX) et de les écrire immédiatement vers le DAC (via SAI\_TX) en temps réel, garantissant une latence minimale. Le mécanisme de DMA circulaire divise le buffer de données en deux moitiés, permettant au processeur de copier une moitié du buffer pendant que le DMA travaille sur l'autre.
+
+
+
+```c
+// SAI Receive Half-Complete Callback
+// Appelée lorsque la première moitié du buffer de réception (RX) est remplie.
+void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *hsai)
+{
+    if (hsai->Instance == SAI2_Block_B)
+    {
+        // Traitement de la première moitié du buffer RX
+        // Copie de la première moitié du buffer RX vers la première moitié du buffer TX
+        // Ce mécanisme est le cœur du "bypass"
+        for (int i = 0; i < AUDIO_BLOCK_SIZE * 2; i++) {
+            audio_tx_buffer[i] = audio_rx_buffer[i];
+        }
+    }
+}
+
+// SAI Receive Complete Callback
+// Appelée lorsque la totalité du buffer de réception (RX) est remplie (la seconde moitié).
+void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
+{
+    if (hsai->Instance == SAI2_Block_B)
+    {
+        // Traitement de la seconde moitié du buffer RX
+        // Copie de la seconde moitié du buffer RX vers la seconde moitié du buffer TX
+        for (int i = 0; i < AUDIO_BLOCK_SIZE * 2; i++) {
+            audio_tx_buffer[AUDIO_BLOCK_SIZE * 2 + i] = audio_rx_buffer[AUDIO_BLOCK_SIZE * 2 + i];
+        }
+    }
+}
+```
+
 ![Capture d'écran de l'oscilloscope montrant le Bypass numérique](images/test_ADC_DAC.png)
 
 L'affichage de l'oscilloscope confirme la réussite de l'implémentation du **Bypass Numérique** (ADC $\rightarrow$ DAC), où le signal analogique d'entrée (Trace 1, Jaune) est numérisé puis immédiatement reconstruit en sortie (Trace 2, Vert). Les deux signaux sont des ondes triangulaires (dents de scie) de fréquences très proches (environ $400 \text{ Hz}$), validant que le taux d'échantillonnage de l'ADC est adéquat pour capturer et restituer la forme d'onde. On note une différence d'amplitude significative (l'entrée étant d'environ $1.09 \text{ V}$ et la sortie d'environ $1.81 \text{ V}$), indiquant qu'un **gain** a été appliqué dans la chaîne numérique ou post-DAC. La fidélité de la forme d'onde démontre le bon fonctionnement et la synchronisation de base des périphériques d'acquisition (ADC) et de restitution (DAC).
